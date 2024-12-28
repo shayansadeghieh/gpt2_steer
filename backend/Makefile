@@ -15,15 +15,15 @@ run-be:
 
 .PHONY: build
 build: 
-	@docker build --platform linux/amd64 --build-arg HF_TOKEN=${HF_TOKEN} -t us-central1-docker.pkg.dev/gpt2-steer/backend/gpt2-steer .
+	@docker build --platform linux/amd64 --build-arg HF_TOKEN=${HF_TOKEN} -t us-central1-docker.pkg.dev/gpt2-steer/gpt2-steer-backend/backend .
 
 .PHONY: run
 run: 
-	@docker run -p 8080:8080 gpt2-steer
+	@docker run -p 8080:8080 backend
 
 .PHONY: push
 push:
-	@docker push us-central1-docker.pkg.dev/gpt2-steer/backend/gpt2-steer
+	@docker push us-central1-docker.pkg.dev/gpt2-steer/gpt2-steer-backend/backend
 
 .PHONY: proxy
 proxy: 
