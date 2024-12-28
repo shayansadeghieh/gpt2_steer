@@ -12,7 +12,6 @@ import torch
 import numpy as np 
 
 models = {}
-hf_token = os.environ.get("HF_TOKEN")
 @asynccontextmanager 
 async def lifespan(app: FastAPI): 
     """
