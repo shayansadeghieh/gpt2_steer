@@ -10,7 +10,8 @@ interface Message {
 function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  
+  const [botMessageInProgress, setBotMessageInProgress] = useState<Message | null>(null); // State for in-progress bot message
+
   const socketRef = useRef<WebSocket | null>(null); // Ref for WebSocket connection
 
   useEffect(() => {
@@ -22,13 +23,22 @@ function Chat() {
     };
 
     socketRef.current.onmessage = (event) => {
-      // Handle incoming bot messages
       const data = event.data;
 
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { id: Date.now(), text: data, sender: 'bot' },
-      ]);
+      setBotMessageInProgress((prevMessage) => {
+        if (prevMessage) {
+          // Update the current bot message
+          return { ...prevMessage, text: prevMessage.text + data };
+        } else {
+          // Create a new bot message if none exists
+          const newBotMessage: Message = {
+            id: Date.now(),
+            text: data,
+            sender: 'bot',
+          };
+          return newBotMessage;
+        }
+      });
     };
 
     socketRef.current.onerror = (error) => {
@@ -39,16 +49,25 @@ function Chat() {
       console.log('WebSocket connection closed.');
     };
 
-    // Clean up WebSocket connection when the component unmounts
     return () => {
-        if (socketRef.current) {
-          socketRef.current.close();
-          console.log('WebSocket connection cleaned up.');
-        }
-      };
-    }, []);
+      if (socketRef.current) {
+        socketRef.current.close();
+        console.log('WebSocket connection cleaned up.');
+      }
+    };
+  }, []);
 
+  useEffect(() => {
+    // Add the bot message to the messages array when it is finalized
+    if (botMessageInProgress) {
+      const timeoutId = setTimeout(() => {
+        setMessages((prevMessages) => [...prevMessages, botMessageInProgress]);
+        setBotMessageInProgress(null); // Clear the in-progress message
+      }, 500); // Optional delay to simulate typing effect
 
+      return () => clearTimeout(timeoutId);
+    }
+  }, [botMessageInProgress]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,21 +76,18 @@ function Chat() {
     const newMessage: Message = {
       id: Date.now(),
       text: inputText,
-      sender: 'user'
+      sender: 'user',
     };
 
     setMessages([...messages, newMessage]);
 
-    // Send message to WebSocket backend
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current.send(inputText);
-      } else {
-        console.error('WebSocket is not open.');
-      }
+      socketRef.current.send(inputText);
+    } else {
+      console.error('WebSocket is not open.');
+    }
 
     setInputText('');
-    
-    // TODO: Add bot response logic here
   };
 
   return (
@@ -85,6 +101,11 @@ function Chat() {
             {message.text}
           </div>
         ))}
+        {botMessageInProgress && (
+          <div className="message bot">
+            {botMessageInProgress.text}
+          </div>
+        )}
       </div>
       <form onSubmit={handleSendMessage} className="input-form">
         <input
