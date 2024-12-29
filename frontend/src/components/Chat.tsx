@@ -10,46 +10,70 @@ interface Message {
 function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const [botMessageInProgress, setBotMessageInProgress] = useState<Message | null>(null); // State for in-progress bot message
+  const [botMessageInProgress, setBotMessageInProgress] = useState<Message | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
-  const socketRef = useRef<WebSocket | null>(null); // Ref for WebSocket connection
+  // Function to create WebSocket connection
+  const createWebSocketConnection = () => {
+    console.log("Connecting to websocket...");
+    const websocketUrl = 'ws://127.0.0.1:8080/chat';
+    const ws = new WebSocket(websocketUrl);
 
-  useEffect(() => {
-    const websocketUrl = 'ws://127.0.0.1:8080/chat'; // Replace with your WebSocket backend URL
-    socketRef.current = new WebSocket(websocketUrl);
-
-    socketRef.current.onopen = () => {
-      console.log('WebSocket connection established.');
+    ws.onopen = () => {
+      console.log('WebSocket connection established.', ws.readyState);
+      setIsConnected(true);
     };
 
-    socketRef.current.onmessage = (event) => {
+    ws.onmessage = (event) => {
+      console.log('Received message:', event.data);
       const data = event.data;
-
       setBotMessageInProgress((prevMessage) => {
-        if (prevMessage) {
-          // Update the current bot message
-          return { ...prevMessage, text: prevMessage.text + data };
-        } else {
-          // Create a new bot message if none exists
-          const newBotMessage: Message = {
-            id: Date.now(),
-            text: data,
-            sender: 'bot',
-          };
-          return newBotMessage;
-        }
+        const newMessage = prevMessage 
+          ? { ...prevMessage, text: prevMessage.text + data }
+          : {
+              id: Date.now(),
+              text: data,
+              sender: 'bot',
+            };
+        console.log('Updated bot message:', newMessage);
+        return newMessage;
       });
     };
 
-    socketRef.current.onerror = (error) => {
+    ws.onerror = (error) => {
       console.error('WebSocket error:', error);
+      setIsConnected(false);
     };
 
-    socketRef.current.onclose = () => {
+    ws.onclose = () => {
       console.log('WebSocket connection closed.');
+      setIsConnected(false);
+      // Attempt to reconnect after a delay
+      setTimeout(() => {
+        if (socketRef.current?.readyState === WebSocket.CLOSED) {
+          createWebSocketConnection();
+        }
+      }, 3000);
     };
+
+    socketRef.current = ws;
+  };
+
+  // Initial connection
+  useEffect(() => {
+    createWebSocketConnection();
+
+    // Ping to keep connection alive
+    const pingInterval = setInterval(() => {
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        console.log('Sending ping...');
+        socketRef.current.send('ping');
+      }
+    }, 30000); // Send ping every 30 seconds
 
     return () => {
+      clearInterval(pingInterval);
       if (socketRef.current) {
         socketRef.current.close();
         console.log('WebSocket connection cleaned up.');
@@ -58,12 +82,11 @@ function Chat() {
   }, []);
 
   useEffect(() => {
-    // Add the bot message to the messages array when it is finalized
     if (botMessageInProgress) {
       const timeoutId = setTimeout(() => {
         setMessages((prevMessages) => [...prevMessages, botMessageInProgress]);
-        setBotMessageInProgress(null); // Clear the in-progress message
-      }, 500); // Optional delay to simulate typing effect
+        setBotMessageInProgress(null);
+      }, 500);
 
       return () => clearTimeout(timeoutId);
     }
@@ -79,12 +102,36 @@ function Chat() {
       sender: 'user',
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
 
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(inputText);
+    // Check connection status and reconnect if necessary
+    if (!isConnected || socketRef.current?.readyState !== WebSocket.OPEN) {
+      console.log('Connection not ready. Current state:', socketRef.current?.readyState);
+      console.log('Attempting to reconnect...');
+      createWebSocketConnection();
+      
+      const maxAttempts = 5;
+      let attempts = 0;
+      
+      const tryToSendMessage = () => {
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          console.log('Connection restored, sending message...');
+          socketRef.current.send(inputText);
+        } else {
+          attempts++;
+          if (attempts < maxAttempts) {
+            console.log(`Attempt ${attempts} failed, trying again in 1 second...`);
+            setTimeout(tryToSendMessage, 1000);
+          } else {
+            console.error('Failed to establish connection after multiple attempts');
+          }
+        }
+      };
+      
+      setTimeout(tryToSendMessage, 1000);
     } else {
-      console.error('WebSocket is not open.');
+      console.log('Sending message on existing connection...');
+      socketRef.current.send(inputText);
     }
 
     setInputText('');
@@ -94,10 +141,7 @@ function Chat() {
     <div className="chat-container">
       <div className="messages-container">
         {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`message ${message.sender}`}
-          >
+          <div key={message.id} className={`message ${message.sender}`}>
             {message.text}
           </div>
         ))}
