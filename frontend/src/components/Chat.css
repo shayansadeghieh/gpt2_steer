@@ -7,8 +7,13 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    width: 100vh;
+    width: 100%; /* Changed from 100vh to 100% */
     background-color: white;
+    position: fixed; /* Added to ensure full coverage */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
   
   .messages-container {
@@ -18,11 +23,12 @@
   }
   
   .message {
-    max-width: 70%;
-    padding: 10px 15px;
-    margin: 10px 0;
-    border-radius: 15px;
+    max-width: 40%;
+    padding: 8px 12px;
+    margin: 8px 0;
+    border-radius: 12px;
     word-wrap: break-word;
+    font-size: 14px;
   }
   
   .user {
@@ -42,6 +48,7 @@
     padding: 50px;
     border-top: 1px solid #ddd;
     gap: 10px;
+    background-color: white; /* Added to ensure consistent background */
   }
   
   .message-input {

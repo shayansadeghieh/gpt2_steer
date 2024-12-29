@@ -64,16 +64,7 @@ function Chat() {
   useEffect(() => {
     createWebSocketConnection();
 
-    // Ping to keep connection alive
-    const pingInterval = setInterval(() => {
-      if (socketRef.current?.readyState === WebSocket.OPEN) {
-        console.log('Sending ping...');
-        socketRef.current.send('ping');
-      }
-    }, 30000); // Send ping every 30 seconds
-
     return () => {
-      clearInterval(pingInterval);
       if (socketRef.current) {
         socketRef.current.close();
         console.log('WebSocket connection cleaned up.');
