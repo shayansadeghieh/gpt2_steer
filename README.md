@@ -1,4 +1,4 @@
-# Steering GPT2 using SAE latents: Packerschat
+# Steering GPT2 using SAE latents: Packerchat
 
 
 ![Demo](assets/packerchat_demo.gif)
