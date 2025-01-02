@@ -130,6 +130,7 @@ function Chat() {
 
   return (
     <div className="chat-container">
+        <h1 className="packer-header">PACKERSCHAT</h1>
       <div className="messages-container">
         {messages.map((message) => (
           <div key={message.id} className={`message ${message.sender}`}>
