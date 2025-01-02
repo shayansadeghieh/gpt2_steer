@@ -9,7 +9,7 @@ For the **backend**, I used python and fastAPI.
 For the **infrastructure**, I used terraform for IaC and GCP's Cloud Run for serverless deployments.
 
 
-**Watch the demo below! **
+**Watch the demo below!**
 
 
 ![Demo](assets/packerchat_demo.gif)
