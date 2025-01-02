@@ -7,9 +7,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStream
 from api.constants import LAYER, MAX_TOKENS, MODEL_ID, STEERING_COEFF
  
 import os 
-import time 
 import torch 
-import numpy as np 
 
 models = {}
 @asynccontextmanager 
@@ -98,13 +96,9 @@ async def chat(websocket: WebSocket):
                                            steering_vector=models["steering_vector"])
 
             
-            # Stream the tokens as they're generated
-            st = time.time()                
+            # Stream the tokens as they're generated            
             for text in streamer:                                        
                 await websocket.send_text(text)
-                et = time.time()
-                print(f"Time taken to send text {text} is {et - st} seconds")
-                st = time.time()                                
 
         except Exception as e:
             await websocket.send_text(f"Error: {str(e)}")
